@@ -14,7 +14,7 @@ oidcProfiles:
   sso-internal:
     oidcDiscoveryURL: https://sso.internal.example.org/.well-known/openid-configuration
     oidcClientId: default-rp
-    oidcSecret: mySecret
+    oidcSecret: mySecret # TODO support custom storage w/ tags like !env, !hvault etc
 
 authorizationProfiles:
   cluster-admins:
