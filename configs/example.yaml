@@ -1,0 +1,40 @@
+http: # TODO make entrypoint list (like Traefik)
+  address: "0.0.0.0"
+  port: 8080
+  vhost: oidcfy.svc.default.cluster.local
+  authForward: /oidcfy/auth/forward
+  authCallback: /oidcfy/auth/callback
+  authLogout: /oidcfy/auth/logout
+
+matchProfiles:
+  kube-dashboard:
+    condition:
+      and:
+        - host: kube-dashboard.example.org
+        - path: /admin
+
+oidcProfiles:
+  sso-internal:
+    oidcDiscoveryURL: https://sso.internal.example.org/.well-known/openid-configuration
+    oidcClientId: default-rp
+    oidcSecret: mySecret
+
+authorizationProfiles:
+  cluster-admins:
+    condition:
+      tokenClaim:
+        name: cluster-admins
+        claim: k8s-roles
+
+mutatorProfiles:
+  forward-token:
+    actions:
+      - headers:
+          - name: Authorization
+            value: "Bearer {{ .AuthContext.Oidc.Token }}"
+
+rules:
+  - matchProfile: kube-dashboard
+    oidcProfile: sso-internal
+    authorizationProfile: cluster-admins
+    mutatorProfile: forward-token
