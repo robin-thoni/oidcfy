@@ -24,9 +24,16 @@ type AuthContextAuthentication interface {
 type AuthContextAuthorization interface {
 }
 
+type AuthContextExtra struct {
+	Oidcfy struct {
+		AuthAction string
+	}
+}
+
 type AuthContext interface {
 	GetRawRequest() *http.Request
 	GetRawResponse() http.ResponseWriter
+	GetExtra() *AuthContextExtra
 	GetAuthContextRule() AuthContextRule
 	GetAuthContextMatch() AuthContextMatch
 	GetAuthContextAuthentication() AuthContextAuthentication

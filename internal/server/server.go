@@ -13,6 +13,7 @@ import (
 type AuthContext struct {
 	RawRequest            *http.Request
 	RawResponse           http.ResponseWriter
+	Extra                 interfaces.AuthContextExtra
 	Rule                  *profiles.Rule
 	MatchProfile          *profiles.MatchProfile
 	AuthenticationProfile *profiles.AuthenticationProfile
@@ -25,6 +26,10 @@ func (ctx *AuthContext) GetRawRequest() *http.Request {
 
 func (ctx *AuthContext) GetRawResponse() http.ResponseWriter {
 	return ctx.RawResponse
+}
+
+func (ctx *AuthContext) GetExtra() *interfaces.AuthContextExtra {
+	return &ctx.Extra
 }
 
 func (ctx *AuthContext) GetAuthContextRule() interfaces.AuthContextRule {
