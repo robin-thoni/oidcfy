@@ -7,6 +7,7 @@ import (
 
 	"github.com/robin-thoni/oidcfy/internal/config"
 	"github.com/robin-thoni/oidcfy/internal/interfaces"
+	"github.com/robin-thoni/oidcfy/internal/utils"
 )
 
 type AuthenticationProfile struct {
@@ -53,12 +54,11 @@ func (rule *AuthenticationProfile) CheckAuthentication(ctx interfaces.AuthContex
 }
 
 func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) error {
-	// oidcUrl, err := utils.RenderTemplate(rule.OidcDiscoveryUrl, ctx)// TODO use manifest auth endpoint
-	// if err != nil {
-	// 	return err
-	// }
-	// ctx.GetRawResponse().Header().Add("Location", oidcUrl)
-	// ctx.GetRawResponse().WriteHeader(http.StatusTemporaryRedirect)
-	ctx.GetRawResponse().WriteHeader(http.StatusNoContent)
-	return nil //errors.New("Failed to authenticate")
+	oidcUrl, err := utils.RenderTemplate(rule.OidcDiscoveryUrl, ctx) // TODO use manifest auth endpoint
+	if err != nil {
+		return err
+	}
+	ctx.GetRawResponse().Header().Add("Location", oidcUrl)
+	ctx.GetRawResponse().WriteHeader(http.StatusTemporaryRedirect)
+	return nil
 }

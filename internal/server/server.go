@@ -159,10 +159,14 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !res {
-		err = authCtx.AuthenticationProfile.Authenticate(&authCtx)
-		if err != nil {
-			log.Println(err)
-			rw.WriteHeader(http.StatusInternalServerError)
+		if authCtx.GetExtra().Oidcfy.AuthAction == interfaces.AuthActionRedirect {
+			err = authCtx.AuthenticationProfile.Authenticate(&authCtx)
+			if err != nil {
+				log.Println(err)
+				rw.WriteHeader(http.StatusInternalServerError)
+			}
+		} else {
+			rw.WriteHeader(http.StatusUnauthorized)
 		}
 		return
 	}

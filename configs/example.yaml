@@ -8,7 +8,14 @@ matchProfiles:
     condition:
       and:
         - host: kube-dashboard.example.org
-        - path: /admin
+        - host: kube-dashboard.example.org
+        - or:
+          - and:
+            - path: /ui
+            - redirect
+          - and:
+            - path: /api
+            - unauthorized
 
 oidcProfiles:
   sso-internal:
