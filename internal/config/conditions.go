@@ -7,11 +7,13 @@ import (
 )
 
 type ConditionConfig struct {
-	And  *ConditionAndConfig  `yaml:"and"`
-	Or   *ConditionOrConfig   `yaml:"or"`
-	Not  *ConditionNotConfig  `yaml:"not"`
-	Host *ConditionHostConfig `yaml:"host"`
-	Path *ConditionPathConfig `yaml:"path"`
+	And          *ConditionAndConfig          `yaml:"and"`
+	Or           *ConditionOrConfig           `yaml:"or"`
+	Not          *ConditionNotConfig          `yaml:"not"`
+	Redirect     *ConditionRedirectConfig     `yaml:"redirect"`
+	Unauthorized *ConditionUnauthorizedConfig `yaml:"unauthorized"`
+	Host         *ConditionHostConfig         `yaml:"host"`
+	Path         *ConditionPathConfig         `yaml:"path"`
 }
 
 func (cond *ConditionConfig) UnmarshalYAML(value *yaml.Node) error {
@@ -48,6 +50,12 @@ func (cond *ConditionOrConfig) UnmarshalYAML(value *yaml.Node) error {
 
 type ConditionNotConfig struct {
 	Condition ConditionConfig `yaml:"condition"`
+}
+
+type ConditionRedirectConfig struct {
+}
+
+type ConditionUnauthorizedConfig struct {
 }
 
 type ConditionHostConfig struct {

@@ -7,6 +7,11 @@ import (
 	"github.com/robin-thoni/oidcfy/internal/config"
 )
 
+const (
+	AuthActionRedirect     = "redirect"
+	AuthActionUnauthorized = "unauthorized"
+)
+
 type AuthContextRule interface {
 	GetConfig() *config.RuleConfig
 	GetMatchProfileName() *template.Template

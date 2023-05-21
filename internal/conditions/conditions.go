@@ -84,6 +84,22 @@ func buildFromConfig(condConfig *config.ConditionConfig, ctx *conditionContext) 
 		}
 		conds = append(conds, &cond1)
 	}
+	if condConfig.Redirect != nil {
+		cond1 := Redirect{}
+		errs1 := cond1.fromConfig(condConfig.Redirect, ctx)
+		if len(errs1) > 0 {
+			errs = append(errs, errs1...)
+		}
+		conds = append(conds, &cond1)
+	}
+	if condConfig.Unauthorized != nil {
+		cond1 := Unauthorized{}
+		errs1 := cond1.fromConfig(condConfig.Unauthorized, ctx)
+		if len(errs1) > 0 {
+			errs = append(errs, errs1...)
+		}
+		conds = append(conds, &cond1)
+	}
 	if condConfig.Host != nil {
 		cond1 := Host{}
 		errs1 := cond1.fromConfig(condConfig.Host, ctx)
