@@ -1,6 +1,8 @@
 package config
 
 import (
+	"fmt"
+
 	"gopkg.in/yaml.v3"
 )
 
@@ -10,6 +12,14 @@ type ConditionConfig struct {
 	Not  *ConditionNotConfig  `yaml:"not"`
 	Host *ConditionHostConfig `yaml:"host"`
 	Path *ConditionPathConfig `yaml:"path"`
+}
+
+func (cond *ConditionConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Tag == "!!str" {
+		return yaml.Unmarshal(([]byte)(fmt.Sprintf("%s: {}", value.Value)), cond)
+	}
+	type rawType ConditionConfig
+	return value.Decode((*rawType)(cond))
 }
 
 type ConditionAndConfig struct {
