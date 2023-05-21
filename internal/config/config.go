@@ -40,12 +40,9 @@ type RuleConfig struct {
 
 type RootConfig struct {
 	Http struct {
-		Address          string `yaml:"address"`
-		Port             int    `yaml:"port"`
-		VHost            string `yaml:"vhost"`
-		AuthForwardPath  string `yaml:"authForward"`
-		AuthCallbackPath string `yaml:"authCallback"`
-		AuthLogoutPath   string `yaml:"authLogout"`
+		Address string `yaml:"address"`
+		Port    int    `yaml:"port"`
+		VHost   string `yaml:"vhost"`
 	} `yaml:"http"`
 	MatchProfiles         map[string]MatchProfileConfig         `yaml:"matchProfiles"`
 	OidcProfiles          map[string]OidcProfileConfig          `yaml:"oidcProfiles"`

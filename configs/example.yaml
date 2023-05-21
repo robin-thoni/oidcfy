@@ -2,9 +2,6 @@ http: # TODO make entrypoint list (like Traefik)
   address: "0.0.0.0"
   port: 8080
   vhost: oidcfy.svc.default.cluster.local
-  authForward: /oidcfy/auth/forward
-  authCallback: /oidcfy/auth/callback
-  authLogout: /oidcfy/auth/logout
 
 matchProfiles:
   kube-dashboard:

@@ -72,9 +72,9 @@ func NewServer(rootConfig *config.RootConfig, profiles *profiles.Profiles) *Serv
 		Profiles:   profiles,
 		OidcfyMux:  http.NewServeMux(),
 	}
-	server.OidcfyMux.HandleFunc(rootConfig.Http.AuthForwardPath, server.authForward)
-	server.OidcfyMux.HandleFunc(rootConfig.Http.AuthCallbackPath, server.authCallback)
-	server.OidcfyMux.HandleFunc(rootConfig.Http.AuthLogoutPath, server.authLogout)
+	server.OidcfyMux.HandleFunc("/oidcfy/auth/forward", server.authForward)
+	server.OidcfyMux.HandleFunc("/oidcfy/auth/callback", server.authCallback)
+	server.OidcfyMux.HandleFunc("/oidcfy/auth/logout", server.authLogout)
 
 	return server
 }
