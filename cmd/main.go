@@ -64,17 +64,21 @@ func main() {
 		log.Println(errs)
 	}
 
-	// fmt.Println(rootConfig)
-
-	// condContext := oidcfy.ConditionContext{
-	// 	AuthContext: oidcfy.AuthContext{},
-	// }
-
-	// result, err := rootConfig.MatchProfiles["kube-dashboard"].Condition.Evaluate(condContext)
-	// if err != nil {
-	// 	log.Fatal(err)
-	// }
-	// fmt.Println(result)
+	for name, profile := range profiles.MatchProfiles {
+		if !profile.IsValid() {
+			log.Printf("Match profile %s is invalid", name)
+		}
+	}
+	for name, profile := range profiles.AuthenticationProfiles {
+		if !profile.IsValid() {
+			log.Printf("Authentication profile %s is invalid", name)
+		}
+	}
+	for name, profile := range profiles.AuthorizationProfiles {
+		if !profile.IsValid() {
+			log.Printf("Authorization profile %s is invalid", name)
+		}
+	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", rootConfig.Http.Address, rootConfig.Http.Port))
 	if err != nil {
