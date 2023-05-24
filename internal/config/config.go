@@ -19,9 +19,15 @@ type MatchProfileConfig struct {
 }
 
 type OidcProfileConfig struct {
-	OidcDiscoveryUrlTmpl string `yaml:"oidcDiscoveryURL"`
-	OidcClientIdTmpl     string `yaml:"oidcClientId"`
-	OidcSecretTmpl       string `yaml:"oidcSecret"`
+	Oidc struct {
+		DiscoveryUrlTmpl string `yaml:"discoveryURL"`
+		ClientIdTmpl     string `yaml:"clientId"`
+		ClientSecretTmpl string `yaml:"clientSecret"`
+		ScopesTmpl       string `yaml:"scopes"`
+		StandardFlow     struct {
+			CallbackTimeoutTmpl string `yaml:"callbackTimeout"`
+		} `yaml:"standardFlow"`
+	} `yaml:"oidc"`
 }
 
 type AuthorizationProfileConfig struct {

@@ -12,6 +12,10 @@ type AuthorizationProfile struct {
 	Condition interfaces.Condition
 }
 
+func (rule *AuthorizationProfile) GetConfig() *config.AuthorizationProfileConfig {
+	return rule.Config
+}
+
 func (rule *AuthorizationProfile) FromConfig(profileConfig *config.AuthorizationProfileConfig, name string) []error {
 	var errs []error
 

@@ -47,7 +47,7 @@ import (
 func main() {
 
 	rootConfig := config.RootConfig{}
-	rootConfigStr, err := os.ReadFile("./configs/example.yaml")
+	rootConfigStr, err := os.ReadFile("./configs/locals/example.yaml")
 	if err != nil {
 		log.Fatal(err)
 		return

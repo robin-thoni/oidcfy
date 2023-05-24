@@ -8,7 +8,6 @@ matchProfiles:
     condition:
       and:
         - host: kube-dashboard.example.org
-        - host: kube-dashboard.example.org
         - or:
           - and:
             - path: /ui
@@ -19,9 +18,11 @@ matchProfiles:
 
 oidcProfiles:
   sso-internal:
-    oidcDiscoveryURL: https://sso.internal.example.org/.well-known/openid-configuration
-    oidcClientId: default-rp
-    oidcSecret: mySecret # TODO support custom storage w/ tags like !env, !hvault etc
+    oidc:
+      discoveryURL: https://sso.internal.example.org/.well-known/openid-configuration
+      clientId: default-rp
+      clientSecret: mySecret # TODO support custom storage w/ tags like !env, !hvault etc
+      scopes: openid profile email
 
 authorizationProfiles:
   cluster-admins:

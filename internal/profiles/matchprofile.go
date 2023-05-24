@@ -12,6 +12,10 @@ type MatchProfile struct {
 	Condition interfaces.Condition
 }
 
+func (rule *MatchProfile) GetConfig() *config.MatchProfileConfig {
+	return rule.Config
+}
+
 func (rule *MatchProfile) FromConfig(profileConfig *config.MatchProfileConfig, name string) []error {
 	var errs []error
 
