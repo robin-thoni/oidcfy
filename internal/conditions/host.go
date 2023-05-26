@@ -18,7 +18,7 @@ func (cond *Host) Evaluate(ctx interfaces.ConditionContext) (bool, error) {
 	if err != nil {
 		return false, err
 	}
-	return ctx.GetAuthContext().GetRawRequest().Host == host, nil
+	return ctx.GetAuthContext().GetOriginalRequest().Url.Host == host, nil
 }
 
 func (cond *Host) fromConfig(condConfig *config.ConditionHostConfig, ctx *conditionContext) []error {

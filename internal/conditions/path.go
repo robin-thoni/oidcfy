@@ -1,6 +1,7 @@
 package conditions
 
 import (
+	"strings"
 	"text/template"
 
 	"github.com/robin-thoni/oidcfy/internal/config"
@@ -14,11 +15,11 @@ type Path struct {
 }
 
 func (cond *Path) Evaluate(ctx interfaces.ConditionContext) (bool, error) {
-	host, err := utils.RenderTemplate(cond.PathTpl, ctx)
+	path, err := utils.RenderTemplate(cond.PathTpl, ctx)
 	if err != nil {
 		return false, err
 	}
-	return ctx.GetAuthContext().GetRawRequest().URL.Path == host, nil
+	return strings.HasPrefix(ctx.GetAuthContext().GetOriginalRequest().Url.Path, path), nil
 }
 
 func (cond *Path) fromConfig(condConfig *config.ConditionPathConfig, ctx *conditionContext) []error {

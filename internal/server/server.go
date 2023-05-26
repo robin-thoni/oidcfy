@@ -1,6 +1,7 @@
 package server
 
 import (
+	"errors"
 	"log"
 	"net/http"
 	"net/url"
@@ -13,8 +14,7 @@ import (
 
 type AuthContext struct {
 	RootConfig            *config.RootConfig
-	RawRequest            *http.Request
-	RawResponse           http.ResponseWriter
+	OriginalRequest       *interfaces.AuthOriginalRequest
 	GlobalCache           *interfaces.AuthContextGlobalCache
 	Extra                 interfaces.AuthContextExtra
 	Rule                  *profiles.Rule
@@ -27,12 +27,8 @@ func (ctx *AuthContext) GetRootConfig() *config.RootConfig {
 	return ctx.RootConfig
 }
 
-func (ctx *AuthContext) GetRawRequest() *http.Request {
-	return ctx.RawRequest
-}
-
-func (ctx *AuthContext) GetRawResponse() http.ResponseWriter {
-	return ctx.RawResponse
+func (ctx *AuthContext) GetOriginalRequest() *interfaces.AuthOriginalRequest {
+	return ctx.OriginalRequest
 }
 
 func (ctx *AuthContext) GetGlobalCache() *interfaces.AuthContextGlobalCache {
@@ -93,6 +89,7 @@ func NewServer(rootConfig *config.RootConfig, profiles *profiles.Profiles) *Serv
 		},
 	}
 	server.OidcfyMux.HandleFunc("/oidcfy/auth/forward", server.authForward)
+	server.OidcfyMux.HandleFunc("/oidcfy/auth/login", server.authLogin)
 	server.OidcfyMux.HandleFunc("/oidcfy/auth/callback", server.authCallback)
 	server.OidcfyMux.HandleFunc("/oidcfy/auth/logout", server.authLogout)
 
@@ -103,79 +100,58 @@ func (server *Server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
 	server.OidcfyMux.ServeHTTP(rw, r)
 }
 
-func (server *Server) authCallback(rw http.ResponseWriter, r *http.Request) {
-	state := r.URL.Query().Get("state")
-	if state == "" {
-		http.Error(rw, "state not found", http.StatusBadRequest) // TODO
-		return
-	}
-
-	cacheItem, err := server.GlobalCache.AuthCallback.Value(state)
-	if err != nil {
-		http.Error(rw, "session not found", http.StatusBadRequest) // TODO
-		return
-	}
-	server.GlobalCache.AuthCallback.Delete(state)
-
-	ctx := cacheItem.Data().(*AuthContext)
-	ctx.RawRequest = r
-	ctx.RawResponse = rw
-	err = ctx.AuthenticationProfile.AuthenticateCallback(ctx)
-	if err != nil {
-		http.Error(rw, "bad token", http.StatusBadRequest) // TODO
-		return
-	}
-	rw.WriteHeader(http.StatusNoContent)
-}
-
-func (server *Server) authLogout(rw http.ResponseWriter, r *http.Request) {
-	rw.WriteHeader(http.StatusNotImplemented)
-	rw.Write(([]byte)("authLogout"))
-}
-
-func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
-
+func buildOriginalRequest(r *http.Request, fromQuery bool) (interfaces.AuthOriginalRequest, error) {
+	req := interfaces.AuthOriginalRequest{}
 	if r.Header.Get("X-Forwarded-Method") != "" &&
+		r.Header.Get("X-Forwarded-Proto") != "" &&
 		r.Header.Get("X-Forwarded-Host") != "" &&
 		r.Header.Get("X-Forwarded-Uri") != "" {
 
-		r.Method = r.Header.Get("X-Forwarded-Method")
-		r.Host = r.Header.Get("X-Forwarded-Host")
-		if _, ok := r.Header["X-Forwarded-Uri"]; ok {
-			r.URL, _ = url.Parse(r.Header.Get("X-Forwarded-Uri"))
-		} else {
-			rw.WriteHeader(http.StatusBadRequest)
-			return // TODO
+		req.Method = r.Header.Get("X-Forwarded-Method")
+		uri, err := url.Parse(r.Header.Get("X-Forwarded-Uri"))
+		if err != nil {
+			return req, err
 		}
-	} else if r.URL.Query().Get("X-Forwarded-Method") != "" &&
+		req.Url = *uri
+		req.Url.Scheme = r.Header.Get("X-Forwarded-Proto")
+		req.Url.Host = r.Header.Get("X-Forwarded-Host")
+	} else if fromQuery &&
+		r.URL.Query().Get("X-Forwarded-Method") != "" &&
+		r.URL.Query().Get("X-Forwarded-Proto") != "" &&
 		r.URL.Query().Get("X-Forwarded-Host") != "" &&
 		r.URL.Query().Get("X-Forwarded-Uri") != "" {
 
-		r.Method = r.URL.Query().Get("X-Forwarded-Method")
-		r.Host = r.URL.Query().Get("X-Forwarded-Host")
-		if _, ok := r.URL.Query()["X-Forwarded-Uri"]; ok {
-			r.URL, _ = url.Parse(r.URL.Query().Get("X-Forwarded-Uri"))
-		} else {
-			rw.WriteHeader(http.StatusBadRequest)
-			return // TODO
+		req.Method = r.URL.Query().Get("X-Forwarded-Method")
+		uri, err := url.Parse(r.URL.Query().Get("X-Forwarded-Uri"))
+		if err != nil {
+			return req, err
 		}
+		req.Url = *uri
+		req.Url.Scheme = r.URL.Query().Get("X-Forwarded-Proto")
+		req.Url.Host = r.URL.Query().Get("X-Forwarded-Host")
 	} else {
-		rw.WriteHeader(http.StatusBadRequest)
-		return // TODO
+		return req, errors.New("Missing X-Forwarded-* parameters")
+	}
+	return req, nil
+}
+
+func (server *Server) authLogin(rw http.ResponseWriter, r *http.Request) {
+	originalRequest, err := buildOriginalRequest(r, true)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
 	}
 
 	authCtx := AuthContext{
-		RootConfig:  server.RootConfig,
-		RawRequest:  r,
-		RawResponse: rw,
-		GlobalCache: server.GlobalCache,
+		RootConfig:      server.RootConfig,
+		OriginalRequest: &originalRequest,
+		GlobalCache:     server.GlobalCache,
 	}
 
 	conditionCtx := ConditionContext{
 		AuthContext: &authCtx,
 	}
-
-	var err error
 
 	authCtx.Rule, authCtx.MatchProfile, err = server.Profiles.GetRule(&conditionCtx)
 	if err != nil {
@@ -201,7 +177,86 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 		return
 	}
 
-	res, err := authCtx.AuthenticationProfile.CheckAuthentication(&authCtx)
+	err = authCtx.AuthenticationProfile.Authenticate(rw, r, &authCtx)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+}
+
+func (server *Server) authCallback(rw http.ResponseWriter, r *http.Request) {
+	state := r.URL.Query().Get("state")
+	if state == "" {
+		http.Error(rw, "state not found", http.StatusBadRequest) // TODO
+		return
+	}
+
+	cacheItem, err := server.GlobalCache.AuthCallback.Value(state)
+	if err != nil {
+		http.Error(rw, "session not found", http.StatusBadRequest) // TODO
+		return
+	}
+	server.GlobalCache.AuthCallback.Delete(state)
+
+	ctx := cacheItem.Data().(*AuthContext)
+	err = ctx.AuthenticationProfile.AuthenticateCallback(rw, r, ctx)
+	if err != nil {
+		http.Error(rw, "bad token", http.StatusBadRequest) // TODO
+		return
+	}
+
+	http.Redirect(rw, r, ctx.OriginalRequest.Url.String(), http.StatusFound)
+}
+
+func (server *Server) authLogout(rw http.ResponseWriter, r *http.Request) {
+	rw.WriteHeader(http.StatusNotImplemented)
+	rw.Write(([]byte)("authLogout"))
+}
+
+func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
+	originalRequest, err := buildOriginalRequest(r, true)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+
+	authCtx := AuthContext{
+		RootConfig:      server.RootConfig,
+		OriginalRequest: &originalRequest,
+		GlobalCache:     server.GlobalCache,
+	}
+
+	conditionCtx := ConditionContext{
+		AuthContext: &authCtx,
+	}
+
+	authCtx.Rule, authCtx.MatchProfile, err = server.Profiles.GetRule(&conditionCtx)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if authCtx.Rule == nil {
+		log.Println("Failed to find a matching rule")
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	authCtx.AuthenticationProfile, err = server.Profiles.GetAuthenticationProfile(&authCtx)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if authCtx.AuthenticationProfile == nil {
+		log.Println("Failed to find a matching authentication profile")
+		rw.WriteHeader(http.StatusUnauthorized)
+		return
+	}
+
+	res, err := authCtx.AuthenticationProfile.CheckAuthentication(rw, r, &authCtx)
 	if err != nil {
 		log.Println(err)
 		rw.WriteHeader(http.StatusInternalServerError)
@@ -209,11 +264,19 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 	}
 	if !res {
 		if authCtx.GetExtra().Oidcfy.AuthAction == interfaces.AuthActionRedirect {
-			err = authCtx.AuthenticationProfile.Authenticate(&authCtx)
+			url, err := url.Parse(server.RootConfig.Http.BaseUrl + "/oidcfy/auth/login")
 			if err != nil {
 				log.Println(err)
 				rw.WriteHeader(http.StatusInternalServerError)
+				return
 			}
+			query := url.Query()
+			query.Add("X-Forwarded-Method", originalRequest.Method)
+			query.Add("X-Forwarded-Proto", originalRequest.Url.Scheme)
+			query.Add("X-Forwarded-Host", originalRequest.Url.Host)
+			query.Add("X-Forwarded-Uri", originalRequest.Url.String())
+			url.RawQuery = query.Encode()
+			http.Redirect(rw, r, url.String(), http.StatusFound)
 		} else {
 			rw.WriteHeader(http.StatusUnauthorized)
 		}

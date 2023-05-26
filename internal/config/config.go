@@ -28,6 +28,10 @@ type OidcProfileConfig struct {
 			CallbackTimeoutTmpl string `yaml:"callbackTimeout"`
 		} `yaml:"standardFlow"`
 	} `yaml:"oidc"`
+	Cookie struct {
+		DomainTmpl string `yaml:"domain"`
+		PathTmpl   string `yaml:"path"`
+	} `yaml:"cookie"`
 }
 
 type AuthorizationProfileConfig struct {

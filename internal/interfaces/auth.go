@@ -2,6 +2,7 @@ package interfaces
 
 import (
 	"net/http"
+	"net/url"
 	"text/template"
 
 	"github.com/coreos/go-oidc"
@@ -18,6 +19,11 @@ type AuthContextGlobalCache struct {
 	AuthCallback *cache2go.CacheTable
 }
 
+type AuthOriginalRequest struct {
+	Url    url.URL
+	Method string
+}
+
 type AuthContextRule interface {
 	GetConfig() *config.RuleConfig
 	GetMatchProfileName() *template.Template
@@ -31,8 +37,8 @@ type AuthContextMatch interface {
 
 type AuthContextAuthentication interface {
 	GetConfig() *config.OidcProfileConfig
-	CheckAuthentication(ctx AuthContext) (bool, error)
-	Authenticate(ctx AuthContext) error
+	CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx AuthContext) (bool, error)
+	Authenticate(rw http.ResponseWriter, r *http.Request, ctx AuthContext) error
 }
 
 type AuthContextAuthorization interface {
@@ -51,8 +57,7 @@ type AuthContextExtra struct {
 
 type AuthContext interface {
 	GetRootConfig() *config.RootConfig
-	GetRawRequest() *http.Request
-	GetRawResponse() http.ResponseWriter
+	GetOriginalRequest() *AuthOriginalRequest
 	GetGlobalCache() *AuthContextGlobalCache
 	GetExtra() *AuthContextExtra
 	GetAuthContextRule() AuthContextRule

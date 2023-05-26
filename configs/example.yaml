@@ -7,6 +7,7 @@ matchProfiles:
   kube-dashboard:
     condition:
       and:
+        - entrypoint: default
         - host: kube-dashboard.example.org
         - or:
           - and:
@@ -33,7 +34,7 @@ authorizationProfiles:
 
 mutatorProfiles:
   forward-token:
-    actions:
+    mutators:
       - headers:
           - name: Authorization
             value: "Bearer {{ .AuthContext.Oidc.Token }}"
@@ -43,3 +44,5 @@ rules:
     oidcProfile: sso-internal
     authorizationProfile: cluster-admins
     mutatorProfile: forward-token
+    values:
+      org: my-org

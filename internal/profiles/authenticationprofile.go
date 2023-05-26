@@ -27,6 +27,9 @@ type AuthenticationProfile struct {
 	ClientId     *template.Template
 	ClientSecret *template.Template
 	Scopes       *template.Template
+
+	CookieDomain *template.Template
+	CookiePath   *template.Template
 }
 
 func (rule *AuthenticationProfile) GetConfig() *config.OidcProfileConfig {
@@ -59,6 +62,16 @@ func (rule *AuthenticationProfile) FromConfig(profileConfig *config.OidcProfileC
 		errs = append(errs, err)
 	}
 
+	rule.CookieDomain, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.DomainTmpl", name)).Parse(profileConfig.Cookie.DomainTmpl)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	rule.CookiePath, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.PathTmpl", name)).Parse(profileConfig.Cookie.PathTmpl)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
 	return errs
 }
 
@@ -69,9 +82,9 @@ func (rule *AuthenticationProfile) IsValid() bool {
 		rule.Scopes != nil
 }
 
-func (rule *AuthenticationProfile) CheckAuthentication(ctx interfaces.AuthContext) (bool, error) {
+func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) (bool, error) {
 
-	idToken, err := ctx.GetRawRequest().Cookie("idToken")
+	idToken, err := r.Cookie("idToken")
 	if err != nil {
 		return false, nil
 	}
@@ -125,7 +138,7 @@ func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext)
 	return &oauth2Config, provider, nil
 }
 
-func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) error {
+func (rule *AuthenticationProfile) Authenticate(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) error {
 	oauth2Config, _, err := rule.makeOAuth2Context(ctx)
 	if err != nil {
 		return err
@@ -140,7 +153,7 @@ func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) erro
 	cookieExpire := time.Now().Local().Add(10 * time.Minute) // TODO add variable for expiration
 
 	state := uuid.New().String()
-	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+	http.SetCookie(rw, &http.Cookie{
 		Name:     "state",
 		Value:    state,
 		Path:     cookiePath,
@@ -151,7 +164,7 @@ func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) erro
 	})
 
 	nonce := uuid.New().String()
-	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+	http.SetCookie(rw, &http.Cookie{
 		Name:     "nonce",
 		Value:    nonce,
 		Path:     cookiePath,
@@ -161,25 +174,25 @@ func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) erro
 		Expires:  cookieExpire,
 	})
 
-	http.Redirect(ctx.GetRawResponse(), ctx.GetRawRequest(), oauth2Config.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
+	http.Redirect(rw, r, oauth2Config.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
 
 	ctx.GetGlobalCache().AuthCallback.Add(state, 10*time.Minute, ctx) // TODO add variable for expiration
 
 	return nil
 }
 
-func (rule *AuthenticationProfile) AuthenticateCallback(ctx interfaces.AuthContext) error {
+func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) error {
 
-	state, err := ctx.GetRawRequest().Cookie("state")
+	state, err := r.Cookie("state")
 	if err != nil {
 		return err
 	}
-	nonce, err := ctx.GetRawRequest().Cookie("nonce")
+	nonce, err := r.Cookie("nonce")
 	if err != nil {
 		return err
 	}
 
-	if state.Value != ctx.GetRawRequest().URL.Query().Get("state") {
+	if state.Value != r.URL.Query().Get("state") {
 		return errors.New("states do not match")
 	}
 
@@ -188,7 +201,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(ctx interfaces.AuthConte
 		return err
 	}
 
-	code := ctx.GetRawRequest().URL.Query().Get("code")
+	code := r.URL.Query().Get("code")
 	oauth2Token, err := oauth2Config.Exchange(context.TODO(), code)
 	if err != nil {
 		return err
@@ -227,20 +240,28 @@ func (rule *AuthenticationProfile) AuthenticateCallback(ctx interfaces.AuthConte
 	if err != nil {
 		return err
 	}
-	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+	cookieDomain, err := utils.RenderTemplate(rule.CookieDomain, ctx)
+	if err != nil {
+		return err
+	}
+	cookiePath, err := utils.RenderTemplate(rule.CookiePath, ctx)
+	if err != nil {
+		return err
+	}
+	http.SetCookie(rw, &http.Cookie{
 		Name:     "idToken",
 		Value:    ctx.GetExtra().Oidcfy.IdTokenRaw,
-		Path:     baseUrl.Path + "/oidcfy/auth/forward", // TODO
-		Domain:   strings.Split(baseUrl.Host, ":")[0],   // TODO
+		Domain:   cookieDomain,
+		Path:     cookiePath,
 		HttpOnly: true,
 		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
 		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
 	})
-	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+	http.SetCookie(rw, &http.Cookie{
 		Name:     "accessToken",
 		Value:    ctx.GetExtra().Oidcfy.AccessTokenRaw,
-		Path:     baseUrl.Path + "/oidcfy/auth/forward", // TODO
-		Domain:   strings.Split(baseUrl.Host, ":")[0],   // TODO
+		Domain:   cookieDomain,
+		Path:     cookiePath,
 		HttpOnly: true,
 		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
 		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
