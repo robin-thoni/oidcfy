@@ -12,6 +12,7 @@ import (
 )
 
 type AuthContext struct {
+	RootConfig            *config.RootConfig
 	RawRequest            *http.Request
 	RawResponse           http.ResponseWriter
 	GlobalCache           *interfaces.AuthContextGlobalCache
@@ -20,6 +21,10 @@ type AuthContext struct {
 	MatchProfile          *profiles.MatchProfile
 	AuthenticationProfile *profiles.AuthenticationProfile
 	AuthorizationProfile  *profiles.AuthorizationProfile
+}
+
+func (ctx *AuthContext) GetRootConfig() *config.RootConfig {
+	return ctx.RootConfig
 }
 
 func (ctx *AuthContext) GetRawRequest() *http.Request {
@@ -160,6 +165,7 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	authCtx := AuthContext{
+		RootConfig:  server.RootConfig,
 		RawRequest:  r,
 		RawResponse: rw,
 		GlobalCache: server.GlobalCache,

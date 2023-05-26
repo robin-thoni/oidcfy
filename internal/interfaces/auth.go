@@ -50,6 +50,7 @@ type AuthContextExtra struct {
 }
 
 type AuthContext interface {
+	GetRootConfig() *config.RootConfig
 	GetRawRequest() *http.Request
 	GetRawResponse() http.ResponseWriter
 	GetGlobalCache() *AuthContextGlobalCache
