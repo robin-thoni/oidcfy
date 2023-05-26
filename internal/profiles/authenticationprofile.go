@@ -2,8 +2,10 @@ package profiles
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"net/http"
+	"net/url"
 	"strings"
 	"text/template"
 	"time"
@@ -68,7 +70,23 @@ func (rule *AuthenticationProfile) IsValid() bool {
 }
 
 func (rule *AuthenticationProfile) CheckAuthentication(ctx interfaces.AuthContext) (bool, error) {
-	return false, nil
+
+	idToken, err := ctx.GetRawRequest().Cookie("idToken")
+	if err != nil {
+		return false, nil
+	}
+
+	oauth2Config, provider, err := rule.makeOAuth2Context(ctx)
+	if err != nil {
+		return false, err
+	}
+	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
+	_, err = verifier.Verify(context.TODO(), idToken.Value)
+	if err != nil {
+		// TODO remove cookie
+		return false, nil
+	}
+	return true, nil
 }
 
 func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext) (*oauth2.Config, *oidc.Provider, error) {
@@ -97,10 +115,12 @@ func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext)
 	oauth2Config := oauth2.Config{
 		ClientID:     oidcClientId,
 		ClientSecret: oidcClientSecret,
-		RedirectURL:  "http://127.0.0.1:8080/oidcfy/auth/callback", // TODO
+		RedirectURL:  fmt.Sprintf("%s/oidcfy/auth/callback", ctx.GetRootConfig().Http.BaseUrl),
 		Endpoint:     provider.Endpoint(),
 		Scopes:       oidcScopes,
 	}
+
+	// TODO cache provider and oauth2Config
 
 	return &oauth2Config, provider, nil
 }
@@ -110,8 +130,37 @@ func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) erro
 	if err != nil {
 		return err
 	}
-	state := uuid.New().String() // TODO set cookie
-	nonce := uuid.New().String() // TODO set cookie
+
+	baseUrl, err := url.Parse(ctx.GetRootConfig().Http.BaseUrl)
+	if err != nil {
+		return err
+	}
+	cookiePath := baseUrl.Path + "/oidcfy/auth/callback"
+	cookieDomain := strings.Split(baseUrl.Host, ":")[0]
+	cookieExpire := time.Now().Local().Add(10 * time.Minute) // TODO add variable for expiration
+
+	state := uuid.New().String()
+	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+		Name:     "state",
+		Value:    state,
+		Path:     cookiePath,
+		Domain:   cookieDomain,
+		HttpOnly: true,
+		Secure:   baseUrl.Scheme == "https",
+		Expires:  cookieExpire,
+	})
+
+	nonce := uuid.New().String()
+	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+		Name:     "nonce",
+		Value:    nonce,
+		Path:     cookiePath,
+		Domain:   cookieDomain,
+		HttpOnly: true,
+		Secure:   baseUrl.Scheme == "https",
+		Expires:  cookieExpire,
+	})
+
 	http.Redirect(ctx.GetRawResponse(), ctx.GetRawRequest(), oauth2Config.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
 
 	ctx.GetGlobalCache().AuthCallback.Add(state, 10*time.Minute, ctx) // TODO add variable for expiration
@@ -121,7 +170,18 @@ func (rule *AuthenticationProfile) Authenticate(ctx interfaces.AuthContext) erro
 
 func (rule *AuthenticationProfile) AuthenticateCallback(ctx interfaces.AuthContext) error {
 
-	// TODO verify state
+	state, err := ctx.GetRawRequest().Cookie("state")
+	if err != nil {
+		return err
+	}
+	nonce, err := ctx.GetRawRequest().Cookie("nonce")
+	if err != nil {
+		return err
+	}
+
+	if state.Value != ctx.GetRawRequest().URL.Query().Get("state") {
+		return errors.New("states do not match")
+	}
 
 	oauth2Config, provider, err := rule.makeOAuth2Context(ctx)
 	if err != nil {
@@ -153,14 +213,38 @@ func (rule *AuthenticationProfile) AuthenticateCallback(ctx interfaces.AuthConte
 	if err != nil {
 		return err
 	}
-	// TODO Verify idtoken nonce
+
+	if ctx.GetExtra().Oidcfy.IdToken.Nonce != nonce.Value {
+		return errors.New("nonces do not match")
+	}
 
 	err = ctx.GetExtra().Oidcfy.IdToken.VerifyAccessToken(ctx.GetExtra().Oidcfy.AccessTokenRaw)
 	if err != nil {
 		return err
 	}
 
-	// TODO set cookie
+	baseUrl, err := url.Parse(ctx.GetRootConfig().Http.BaseUrl)
+	if err != nil {
+		return err
+	}
+	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+		Name:     "idToken",
+		Value:    ctx.GetExtra().Oidcfy.IdTokenRaw,
+		Path:     baseUrl.Path + "/oidcfy/auth/forward", // TODO
+		Domain:   strings.Split(baseUrl.Host, ":")[0],   // TODO
+		HttpOnly: true,
+		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
+		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
+	})
+	http.SetCookie(ctx.GetRawResponse(), &http.Cookie{
+		Name:     "accessToken",
+		Value:    ctx.GetExtra().Oidcfy.AccessTokenRaw,
+		Path:     baseUrl.Path + "/oidcfy/auth/forward", // TODO
+		Domain:   strings.Split(baseUrl.Host, ":")[0],   // TODO
+		HttpOnly: true,
+		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
+		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
+	})
 
 	return nil
 }
