@@ -1,7 +1,7 @@
 http: # TODO make entrypoint list (like Traefik)
   address: "0.0.0.0"
   port: 8080
-  vhost: oidcfy.svc.default.cluster.local
+  baseUrl: https://oidcfy.svc.default.cluster.local
 
 matchProfiles:
   kube-dashboard:

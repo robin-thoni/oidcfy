@@ -48,7 +48,7 @@ type RootConfig struct {
 	Http struct {
 		Address string `yaml:"address"`
 		Port    int    `yaml:"port"`
-		VHost   string `yaml:"vhost"`
+		BaseUrl string `yaml:"baseUrl"`
 	} `yaml:"http"`
 	MatchProfiles         map[string]MatchProfileConfig         `yaml:"matchProfiles"`
 	OidcProfiles          map[string]OidcProfileConfig          `yaml:"oidcProfiles"`
