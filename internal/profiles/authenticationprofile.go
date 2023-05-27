@@ -2,6 +2,8 @@ package profiles
 
 import (
 	"context"
+	"crypto"
+	"encoding/hex"
 	"errors"
 	"fmt"
 	"net/http"
@@ -29,6 +31,7 @@ type AuthenticationProfile struct {
 	UsedBy []Rule
 
 	oauthContextCache *cache2go.CacheTable
+	oauthVerifyCache  *cache2go.CacheTable
 
 	DiscoveryUrl *template.Template
 	ClientId     *template.Template
@@ -49,6 +52,7 @@ func (rule *AuthenticationProfile) FromConfig(profileConfig *config.OidcProfileC
 
 	rule.Config = profileConfig
 	rule.oauthContextCache = cache2go.Cache("AuthenticationProfile.oauthContextCache")
+	rule.oauthVerifyCache = cache2go.Cache("AuthenticationProfile.oauthVerifyCache")
 
 	rule.DiscoveryUrl, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.OidcDiscoveryUrlTmpl", name)).Parse(profileConfig.Oidc.DiscoveryUrlTmpl)
 	if err != nil {
@@ -94,22 +98,28 @@ func (rule *AuthenticationProfile) IsValid() bool {
 
 func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) (bool, error) {
 
-	idToken, err := r.Cookie("idToken")
+	idTokenRaw, err := r.Cookie("idToken")
 	if err != nil {
 		return false, nil
+	}
+	idTokenHash := hex.EncodeToString(crypto.SHA1.New().Sum(([]byte)(idTokenRaw.Value)))
+	verifyCacheItem, err := rule.oauthVerifyCache.Value(idTokenHash)
+	if verifyCacheItem != nil && err == nil {
+		return verifyCacheItem.Data().(bool), nil
 	}
 
 	oauth2Config, provider, err := rule.makeOAuth2Context(ctx)
 	if err != nil {
 		return false, err
 	}
-	// TODO cache Verify result? What if token not *yet* valid? (e.g. nbf field)
+
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
-	_, err = verifier.Verify(context.TODO(), idToken.Value)
+	idToken, err := verifier.Verify(context.TODO(), idTokenRaw.Value)
 	if err != nil {
 		// TODO remove cookie
 		return false, nil
 	}
+	rule.oauthVerifyCache.Add(idTokenHash, idToken.Expiry.Sub(time.Now()), true) // TODO add configuration for token caching duration, to allow shorter detection of revoked tokens
 	return true, nil
 }
 
