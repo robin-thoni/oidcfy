@@ -22,6 +22,11 @@ import (
 	"golang.org/x/oauth2"
 )
 
+const (
+	COOKIE_ID_TOKEN     = "oidcfy.idToken"
+	COOKIE_ACCESS_TOKEN = "oidcfy.accessToken"
+)
+
 type oauthContextCache struct {
 	Provider *oidc.Provider
 }
@@ -98,7 +103,7 @@ func (rule *AuthenticationProfile) IsValid() bool {
 
 func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) (bool, error) {
 
-	idTokenRaw, err := r.Cookie("idToken")
+	idTokenRaw, err := r.Cookie(COOKIE_ID_TOKEN)
 	if err != nil {
 		return false, nil
 	}
@@ -282,7 +287,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		return err
 	}
 	http.SetCookie(rw, &http.Cookie{
-		Name:     "idToken",
+		Name:     COOKIE_ID_TOKEN,
 		Value:    ctx.GetExtra().Oidcfy.IdTokenRaw,
 		Domain:   cookieDomain,
 		Path:     cookiePath,
@@ -291,7 +296,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
 	})
 	http.SetCookie(rw, &http.Cookie{
-		Name:     "accessToken",
+		Name:     COOKIE_ACCESS_TOKEN,
 		Value:    ctx.GetExtra().Oidcfy.AccessTokenRaw,
 		Domain:   cookieDomain,
 		Path:     cookiePath,
