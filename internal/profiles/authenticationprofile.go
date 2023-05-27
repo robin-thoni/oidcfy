@@ -42,6 +42,8 @@ type AuthenticationProfile struct {
 	ClientSecret *template.Template
 	Scopes       *template.Template
 
+	LoginTimeout *template.Template
+
 	CookieDomain *template.Template
 	CookiePath   *template.Template
 	CookieSecure *template.Template
@@ -75,6 +77,11 @@ func (rule *AuthenticationProfile) FromConfig(profileConfig *config.OidcProfileC
 	}
 
 	rule.Scopes, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.ScopesTmpl", name)).Parse(profileConfig.Oidc.ScopesTmpl)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	rule.LoginTimeout, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.LoginTimeoutTmpl", name)).Parse(profileConfig.LoginTimeoutTmpl)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -189,7 +196,11 @@ func (rule *AuthenticationProfile) Authenticate(rw http.ResponseWriter, r *http.
 	if err != nil {
 		return err
 	}
-	sessionExpiry := 10 * time.Minute // TODO add variable for expiration
+	loginTimeout, err := utils.RenderTemplateInt(rule.LoginTimeout, ctx)
+	if err != nil {
+		return err
+	}
+	sessionExpiry := time.Duration(loginTimeout) * time.Minute
 	cookiePath := baseUrl.Path + "/oidcfy/auth/callback"
 	cookieDomain := strings.Split(baseUrl.Host, ":")[0]
 	cookieExpire := time.Now().Local().Add(sessionExpiry)

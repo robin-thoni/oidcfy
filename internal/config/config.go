@@ -28,10 +28,11 @@ type OidcProfileConfig struct {
 			CallbackTimeoutTmpl string `yaml:"callbackTimeout"`
 		} `yaml:"standardFlow"`
 	} `yaml:"oidc"`
-	Cookie struct {
+	LoginTimeoutTmpl string `yaml:"loginTimeout"`
+	Cookie           struct {
 		DomainTmpl string `yaml:"domain"`
 		PathTmpl   string `yaml:"path"`
-		SecureTmpl   string `yaml:"secure"`
+		SecureTmpl string `yaml:"secure"`
 	} `yaml:"cookie"`
 }
 
