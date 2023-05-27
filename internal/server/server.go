@@ -5,6 +5,7 @@ import (
 	"log"
 	"net/http"
 	"net/url"
+	"time"
 
 	"github.com/muesli/cache2go"
 	"github.com/robin-thoni/oidcfy/internal/config"
@@ -97,6 +98,11 @@ func NewServer(rootConfig *config.RootConfig, profiles *profiles.Profiles) *Serv
 }
 
 func (server *Server) ServeHTTP(rw http.ResponseWriter, r *http.Request) {
+	start := time.Now()
+	defer func() {
+		elapsed := time.Since(start)
+		log.Printf("%s %s", r.URL, elapsed)
+	}()
 	server.OidcfyMux.ServeHTTP(rw, r)
 }
 
