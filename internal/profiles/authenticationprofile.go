@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/google/uuid"
+	"github.com/muesli/cache2go"
 
 	"github.com/coreos/go-oidc"
 	"github.com/robin-thoni/oidcfy/internal/config"
@@ -19,9 +20,15 @@ import (
 	"golang.org/x/oauth2"
 )
 
+type oauthContextCache struct {
+	Provider *oidc.Provider
+}
+
 type AuthenticationProfile struct {
 	Config *config.OidcProfileConfig
 	UsedBy []Rule
+
+	oauthContextCache *cache2go.CacheTable
 
 	DiscoveryUrl *template.Template
 	ClientId     *template.Template
@@ -41,6 +48,7 @@ func (rule *AuthenticationProfile) FromConfig(profileConfig *config.OidcProfileC
 	var err error
 
 	rule.Config = profileConfig
+	rule.oauthContextCache = cache2go.Cache("AuthenticationProfile.oauthContextCache")
 
 	rule.DiscoveryUrl, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.OidcDiscoveryUrlTmpl", name)).Parse(profileConfig.Oidc.DiscoveryUrlTmpl)
 	if err != nil {
@@ -95,6 +103,7 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 	if err != nil {
 		return false, err
 	}
+	// TODO cache Verify result? What if token not *yet* valid? (e.g. nbf field)
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
 	_, err = verifier.Verify(context.TODO(), idToken.Value)
 	if err != nil {
@@ -122,9 +131,21 @@ func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext)
 		return nil, nil, err
 	}
 	oidcScopes := strings.Split(oidcScopesStr, " ")
-	provider, err := oidc.NewProvider(context.TODO(), oidcUrl)
-	if err != nil {
-		return nil, nil, err
+
+	var provider *oidc.Provider
+	providerItem, err := rule.oauthContextCache.Value(oidcUrl)
+	if err == nil && providerItem != nil {
+		provider = providerItem.Data().(*oauthContextCache).Provider
+	}
+
+	if provider == nil {
+		provider, err = oidc.NewProvider(context.TODO(), oidcUrl)
+		if err != nil {
+			return nil, nil, err
+		}
+		rule.oauthContextCache.Add(oidcUrl, 1*time.Hour, &oauthContextCache{
+			Provider: provider,
+		})
 	}
 
 	oauth2Config := oauth2.Config{
