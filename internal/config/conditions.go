@@ -14,6 +14,7 @@ type ConditionConfig struct {
 	Unauthorized *ConditionUnauthorizedConfig `yaml:"unauthorized"`
 	Host         *ConditionHostConfig         `yaml:"host"`
 	Path         *ConditionPathConfig         `yaml:"path"`
+	Claim        *ConditionClaimConfig        `yaml:"claim"`
 }
 
 func (cond *ConditionConfig) UnmarshalYAML(value *yaml.Node) error {
@@ -81,5 +82,18 @@ func (cond *ConditionPathConfig) UnmarshalYAML(value *yaml.Node) error {
 		return nil
 	}
 	type rawType ConditionPathConfig
+	return value.Decode((*rawType)(cond))
+}
+
+type ConditionClaimConfig struct {
+	ClaimTpl string `yaml:"claim"`
+}
+
+func (cond *ConditionClaimConfig) UnmarshalYAML(value *yaml.Node) error {
+	if value.Tag == "!!str" {
+		cond.ClaimTpl = value.Value
+		return nil
+	}
+	type rawType ConditionClaimConfig
 	return value.Decode((*rawType)(cond))
 }

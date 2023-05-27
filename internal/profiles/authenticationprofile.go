@@ -2,7 +2,9 @@ package profiles
 
 import (
 	"crypto"
+	"encoding/base64"
 	"encoding/hex"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"net/http"
@@ -113,6 +115,14 @@ func (rule *AuthenticationProfile) IsValid() bool {
 		rule.CookiePath != nil
 }
 
+func parseJwt(token string) map[string]interface{} {
+	payload, err := base64.RawURLEncoding.DecodeString(strings.Split(token, ".")[1])
+	_ = err
+	var anyJson map[string]interface{}
+	json.Unmarshal(payload, &anyJson)
+	return anyJson
+}
+
 func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) (bool, error) {
 
 	idTokenRaw, err := r.Cookie(COOKIE_ID_TOKEN)
@@ -122,6 +132,9 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 	idTokenHash := hex.EncodeToString(crypto.SHA1.New().Sum(([]byte)(idTokenRaw.Value)))
 	verifyCacheItem, err := rule.oauthVerifyCache.Value(idTokenHash)
 	if verifyCacheItem != nil && err == nil {
+		ctx.GetExtra().Oidcfy.IdTokenRaw = idTokenRaw.Value
+		ctx.GetExtra().Oidcfy.IdToken = parseJwt(idTokenRaw.Value)
+
 		return verifyCacheItem.Data().(bool), nil
 	}
 
@@ -136,6 +149,8 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 		// TODO remove cookie
 		return false, nil
 	}
+	ctx.GetExtra().Oidcfy.IdTokenRaw = idTokenRaw.Value
+	ctx.GetExtra().Oidcfy.IdToken = parseJwt(idTokenRaw.Value)
 	rule.oauthVerifyCache.Add(idTokenHash, idToken.Expiry.Sub(time.Now()), true) // TODO add configuration for token caching duration, to allow shorter detection of revoked tokens
 	return true, nil
 }
@@ -275,16 +290,16 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 	}
 
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
-	ctx.GetExtra().Oidcfy.IdToken, err = verifier.Verify(ctx.GetContext(), ctx.GetExtra().Oidcfy.IdTokenRaw)
+	idToken, err := verifier.Verify(ctx.GetContext(), ctx.GetExtra().Oidcfy.IdTokenRaw)
 	if err != nil {
 		return err
 	}
 
-	if ctx.GetExtra().Oidcfy.IdToken.Nonce != nonce.Value {
+	if idToken.Nonce != nonce.Value {
 		return errors.New("nonces do not match")
 	}
 
-	err = ctx.GetExtra().Oidcfy.IdToken.VerifyAccessToken(ctx.GetExtra().Oidcfy.AccessTokenRaw)
+	err = idToken.VerifyAccessToken(ctx.GetExtra().Oidcfy.AccessTokenRaw)
 	if err != nil {
 		return err
 	}
@@ -308,7 +323,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		Path:     cookiePath,
 		HttpOnly: true,
 		Secure:   cookieSecure,
-		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
+		Expires:  idToken.Expiry,
 	})
 	http.SetCookie(rw, &http.Cookie{
 		Name:     COOKIE_ACCESS_TOKEN,
@@ -317,7 +332,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		Path:     cookiePath,
 		HttpOnly: true,
 		Secure:   cookieSecure,
-		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
+		Expires:  idToken.Expiry,
 	})
 
 	return nil

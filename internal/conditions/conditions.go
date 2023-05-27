@@ -116,6 +116,14 @@ func buildFromConfig(condConfig *config.ConditionConfig, ctx *conditionContext) 
 		}
 		conds = append(conds, &cond1)
 	}
+	if condConfig.Claim != nil {
+		cond1 := Claim{}
+		errs1 := cond1.fromConfig(condConfig.Claim, ctx)
+		if len(errs1) > 0 {
+			errs = append(errs, errs1...)
+		}
+		conds = append(conds, &cond1)
+	}
 
 	// v := reflect.ValueOf(condConfig)
 	// for i := 0; i < v.NumField(); i++ {

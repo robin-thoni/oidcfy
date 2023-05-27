@@ -6,7 +6,6 @@ import (
 	"net/url"
 	"text/template"
 
-	"github.com/coreos/go-oidc"
 	"github.com/muesli/cache2go"
 	"github.com/robin-thoni/oidcfy/internal/config"
 )
@@ -50,8 +49,9 @@ type AuthContextExtra struct {
 	Oidcfy struct {
 		AuthAction      string
 		IdTokenRaw      string
-		IdToken         *oidc.IDToken
+		IdToken         map[string]interface{}
 		AccessTokenRaw  string
+		AccessToken     map[string]interface{}
 		RefreshTokenRaw string
 	}
 }
