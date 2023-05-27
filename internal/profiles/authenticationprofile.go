@@ -183,9 +183,10 @@ func (rule *AuthenticationProfile) Authenticate(rw http.ResponseWriter, r *http.
 	if err != nil {
 		return err
 	}
+	sessionExpiry := 10 * time.Minute // TODO add variable for expiration
 	cookiePath := baseUrl.Path + "/oidcfy/auth/callback"
 	cookieDomain := strings.Split(baseUrl.Host, ":")[0]
-	cookieExpire := time.Now().Local().Add(10 * time.Minute) // TODO add variable for expiration
+	cookieExpire := time.Now().Local().Add(sessionExpiry)
 
 	state := uuid.New().String()
 	http.SetCookie(rw, &http.Cookie{
@@ -211,7 +212,7 @@ func (rule *AuthenticationProfile) Authenticate(rw http.ResponseWriter, r *http.
 
 	http.Redirect(rw, r, oauth2Config.AuthCodeURL(state, oidc.Nonce(nonce)), http.StatusFound)
 
-	ctx.GetGlobalCache().AuthCallback.Add(state, 10*time.Minute, ctx) // TODO add variable for expiration
+	ctx.GetGlobalCache().AuthCallback.Add(state, sessionExpiry, ctx)
 
 	return nil
 }
