@@ -79,7 +79,9 @@ func (rule *AuthenticationProfile) IsValid() bool {
 	return rule.DiscoveryUrl != nil &&
 		rule.ClientId != nil &&
 		rule.ClientSecret != nil &&
-		rule.Scopes != nil
+		rule.Scopes != nil &&
+		rule.CookieDomain != nil &&
+		rule.CookiePath != nil
 }
 
 func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r *http.Request, ctx interfaces.AuthContext) (bool, error) {
