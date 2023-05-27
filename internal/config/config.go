@@ -31,6 +31,7 @@ type OidcProfileConfig struct {
 	Cookie struct {
 		DomainTmpl string `yaml:"domain"`
 		PathTmpl   string `yaml:"path"`
+		SecureTmpl   string `yaml:"secure"`
 	} `yaml:"cookie"`
 }
 

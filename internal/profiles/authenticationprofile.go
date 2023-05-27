@@ -44,6 +44,7 @@ type AuthenticationProfile struct {
 
 	CookieDomain *template.Template
 	CookiePath   *template.Template
+	CookieSecure *template.Template
 }
 
 func (rule *AuthenticationProfile) GetConfig() *config.OidcProfileConfig {
@@ -84,6 +85,11 @@ func (rule *AuthenticationProfile) FromConfig(profileConfig *config.OidcProfileC
 	}
 
 	rule.CookiePath, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.PathTmpl", name)).Parse(profileConfig.Cookie.PathTmpl)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	rule.CookieSecure, err = template.New(fmt.Sprintf("OidcProfileConfig.%s.SecureTmpl", name)).Parse(profileConfig.Cookie.SecureTmpl)
 	if err != nil {
 		errs = append(errs, err)
 	}
@@ -272,15 +278,15 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		return err
 	}
 
-	baseUrl, err := url.Parse(ctx.GetRootConfig().Http.BaseUrl)
-	if err != nil {
-		return err
-	}
 	cookieDomain, err := utils.RenderTemplate(rule.CookieDomain, ctx)
 	if err != nil {
 		return err
 	}
 	cookiePath, err := utils.RenderTemplate(rule.CookiePath, ctx)
+	if err != nil {
+		return err
+	}
+	cookieSecure, err := utils.RenderTemplateBool(rule.CookieSecure, ctx)
 	if err != nil {
 		return err
 	}
@@ -290,7 +296,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		Domain:   cookieDomain,
 		Path:     cookiePath,
 		HttpOnly: true,
-		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
+		Secure:   cookieSecure,
 		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
 	})
 	http.SetCookie(rw, &http.Cookie{
@@ -299,7 +305,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 		Domain:   cookieDomain,
 		Path:     cookiePath,
 		HttpOnly: true,
-		Secure:   baseUrl.Scheme == "https", // TODO must match with applications
+		Secure:   cookieSecure,
 		Expires:  ctx.GetExtra().Oidcfy.IdToken.Expiry,
 	})
 
