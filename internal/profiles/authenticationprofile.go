@@ -170,8 +170,6 @@ func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext)
 		Scopes:       oidcScopes,
 	}
 
-	// TODO cache provider and oauth2Config
-
 	return &oauth2Config, provider, nil
 }
 
