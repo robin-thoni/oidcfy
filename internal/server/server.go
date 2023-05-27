@@ -1,6 +1,7 @@
 package server
 
 import (
+	"context"
 	"errors"
 	"log"
 	"net/http"
@@ -14,6 +15,7 @@ import (
 )
 
 type AuthContext struct {
+	Context               context.Context
 	RootConfig            *config.RootConfig
 	OriginalRequest       *interfaces.AuthOriginalRequest
 	GlobalCache           *interfaces.AuthContextGlobalCache
@@ -22,6 +24,10 @@ type AuthContext struct {
 	MatchProfile          *profiles.MatchProfile
 	AuthenticationProfile *profiles.AuthenticationProfile
 	AuthorizationProfile  *profiles.AuthorizationProfile
+}
+
+func (ctx *AuthContext) GetContext() context.Context {
+	return ctx.Context
 }
 
 func (ctx *AuthContext) GetRootConfig() *config.RootConfig {
@@ -150,6 +156,7 @@ func (server *Server) authLogin(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	authCtx := AuthContext{
+		Context:         context.Background(),
 		RootConfig:      server.RootConfig,
 		OriginalRequest: &originalRequest,
 		GlobalCache:     server.GlobalCache,
@@ -206,6 +213,7 @@ func (server *Server) authCallback(rw http.ResponseWriter, r *http.Request) {
 	server.GlobalCache.AuthCallback.Delete(state)
 
 	ctx := cacheItem.Data().(*AuthContext)
+	ctx.Context = context.Background()
 	err = ctx.AuthenticationProfile.AuthenticateCallback(rw, r, ctx)
 	if err != nil {
 		http.Error(rw, "bad token", http.StatusBadRequest) // TODO
@@ -229,6 +237,7 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 	}
 
 	authCtx := AuthContext{
+		Context:         context.Background(),
 		RootConfig:      server.RootConfig,
 		OriginalRequest: &originalRequest,
 		GlobalCache:     server.GlobalCache,

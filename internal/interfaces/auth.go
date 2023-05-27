@@ -1,6 +1,7 @@
 package interfaces
 
 import (
+	"context"
 	"net/http"
 	"net/url"
 	"text/template"
@@ -56,6 +57,7 @@ type AuthContextExtra struct {
 }
 
 type AuthContext interface {
+	GetContext() context.Context
 	GetRootConfig() *config.RootConfig
 	GetOriginalRequest() *AuthOriginalRequest
 	GetGlobalCache() *AuthContextGlobalCache

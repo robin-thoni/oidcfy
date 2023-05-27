@@ -1,7 +1,6 @@
 package profiles
 
 import (
-	"context"
 	"crypto"
 	"encoding/hex"
 	"errors"
@@ -119,7 +118,7 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 	}
 
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
-	idToken, err := verifier.Verify(context.TODO(), idTokenRaw.Value)
+	idToken, err := verifier.Verify(ctx.GetContext(), idTokenRaw.Value)
 	if err != nil {
 		// TODO remove cookie
 		return false, nil
@@ -154,7 +153,7 @@ func (rule *AuthenticationProfile) makeOAuth2Context(ctx interfaces.AuthContext)
 	}
 
 	if provider == nil {
-		provider, err = oidc.NewProvider(context.TODO(), oidcUrl)
+		provider, err = oidc.NewProvider(ctx.GetContext(), oidcUrl)
 		if err != nil {
 			return nil, nil, err
 		}
@@ -240,7 +239,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 	}
 
 	code := r.URL.Query().Get("code")
-	oauth2Token, err := oauth2Config.Exchange(context.TODO(), code)
+	oauth2Token, err := oauth2Config.Exchange(ctx.GetContext(), code)
 	if err != nil {
 		return err
 	}
@@ -260,7 +259,7 @@ func (rule *AuthenticationProfile) AuthenticateCallback(rw http.ResponseWriter, 
 	}
 
 	var verifier = provider.Verifier(&oidc.Config{ClientID: oauth2Config.ClientID})
-	ctx.GetExtra().Oidcfy.IdToken, err = verifier.Verify(context.TODO(), ctx.GetExtra().Oidcfy.IdTokenRaw)
+	ctx.GetExtra().Oidcfy.IdToken, err = verifier.Verify(ctx.GetContext(), ctx.GetExtra().Oidcfy.IdTokenRaw)
 	if err != nil {
 		return err
 	}
