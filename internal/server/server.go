@@ -24,6 +24,7 @@ type AuthContext struct {
 	MatchProfile          *profiles.MatchProfile
 	AuthenticationProfile *profiles.AuthenticationProfile
 	AuthorizationProfile  *profiles.AuthorizationProfile
+	MutatorProfile        *profiles.MutatorProfile
 }
 
 func (ctx *AuthContext) GetContext() context.Context {
@@ -62,6 +63,10 @@ func (ctx *AuthContext) GetAuthContextAuthorization() interfaces.AuthContextAuth
 	return ctx.AuthorizationProfile
 }
 
+func (ctx *AuthContext) GetAuthContextMutator() interfaces.AuthContextMutator {
+	return ctx.MutatorProfile
+}
+
 type ConditionContextDebug struct {
 }
 
@@ -75,6 +80,22 @@ func (ctx *ConditionContext) GetAuthContext() interfaces.AuthContext {
 }
 
 func (ctx *ConditionContext) GetDebug() interfaces.ConditionContextDebug {
+	return ctx.Debug
+}
+
+type MutatorContextDebug struct {
+}
+
+type MutatorContext struct {
+	AuthContext interfaces.AuthContext
+	Debug       interfaces.MutatorContextDebug
+}
+
+func (ctx *MutatorContext) GetAuthContext() interfaces.AuthContext {
+	return ctx.AuthContext
+}
+
+func (ctx *MutatorContext) GetDebug() interfaces.MutatorContextDebug {
 	return ctx.Debug
 }
 
@@ -316,11 +337,31 @@ func (server *Server) authForward(rw http.ResponseWriter, r *http.Request) {
 		rw.WriteHeader(http.StatusInternalServerError)
 		return
 	}
-	if res {
-		rw.WriteHeader(http.StatusOK)
+	if !res {
+		rw.WriteHeader(http.StatusForbidden)
 		return
 	}
 
-	log.Println("Unauthorized by profile")
-	rw.WriteHeader(http.StatusUnauthorized)
+	mutatorCtx := MutatorContext{
+		AuthContext: &authCtx,
+	}
+
+	authCtx.MutatorProfile, err = server.Profiles.GetMutatorProfile(&authCtx)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	if authCtx.MutatorProfile == nil {
+		log.Println("Failed to find a matching mutator profile")
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	err = authCtx.MutatorProfile.Mutate(rw, &mutatorCtx)
+	if err != nil {
+		log.Println(err)
+		rw.WriteHeader(http.StatusInternalServerError)
+		return
+	}
+	rw.WriteHeader(http.StatusOK)
 }

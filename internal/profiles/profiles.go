@@ -13,6 +13,7 @@ type Profiles struct {
 	MatchProfiles          map[string]*MatchProfile
 	AuthenticationProfiles map[string]*AuthenticationProfile
 	AuthorizationProfiles  map[string]*AuthorizationProfile
+	MutatorProfiles        map[string]*MutatorProfile
 	Rules                  []*Rule
 }
 
@@ -47,6 +48,16 @@ func (profs *Profiles) FromConfig(rootConfig *config.RootConfig) []error {
 			errs = append(errs, errs1...)
 		}
 		profs.AuthorizationProfiles[profileName] = &matchProfile // append even if errors
+	}
+
+	profs.MutatorProfiles = map[string]*MutatorProfile{}
+	for profileName, profileConfig := range rootConfig.MutatorProfiles {
+		mutatorProfile := MutatorProfile{}
+		errs1 := mutatorProfile.FromConfig(&profileConfig, profileName)
+		if len(errs) > 0 {
+			errs = append(errs, errs1...)
+		}
+		profs.MutatorProfiles[profileName] = &mutatorProfile // append even if errors
 	}
 
 	profs.Rules = []*Rule{}
@@ -131,6 +142,24 @@ func (profiles *Profiles) GetAuthorizationProfile(ctx interfaces.AuthContext) (*
 	}
 	if profile == nil || !profile.IsValid() {
 		return nil, errors.New(fmt.Sprintf("Authorization profile %s is invalid", name))
+	}
+
+	return profile, nil
+}
+
+func (profiles *Profiles) GetMutatorProfile(ctx interfaces.AuthContext) (*MutatorProfile, error) {
+	rule := ctx.GetAuthContextRule()
+	name, err := utils.RenderTemplate(rule.GetMutatorProfileName(), ctx)
+	if err != nil {
+		return nil, err
+	}
+
+	profile, ok := profiles.MutatorProfiles[name]
+	if !ok {
+		return nil, nil //errors.New(fmt.Sprintf("No authorization profile named: %s", name))
+	}
+	if profile == nil || !profile.IsValid() {
+		return nil, errors.New(fmt.Sprintf("Mutator profile %s is invalid", name))
 	}
 
 	return profile, nil

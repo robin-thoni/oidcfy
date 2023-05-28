@@ -29,6 +29,7 @@ type AuthContextRule interface {
 	GetMatchProfileName() *template.Template
 	GetAuthenticationProfileName() *template.Template
 	GetAuthorizationProfileName() *template.Template
+	GetMutatorProfileName() *template.Template
 }
 
 type AuthContextMatch interface {
@@ -43,6 +44,10 @@ type AuthContextAuthentication interface {
 
 type AuthContextAuthorization interface {
 	GetConfig() *config.AuthorizationProfileConfig
+}
+
+type AuthContextMutator interface {
+	GetConfig() *config.MutatorProfileConfig
 }
 
 type AuthContextExtra struct {
@@ -66,4 +71,5 @@ type AuthContext interface {
 	GetAuthContextMatch() AuthContextMatch
 	GetAuthContextAuthentication() AuthContextAuthentication
 	GetAuthContextAuthorization() AuthContextAuthorization
+	GetAuthContextMutator() AuthContextMutator
 }

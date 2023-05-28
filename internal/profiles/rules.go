@@ -12,6 +12,7 @@ type Rule struct {
 	MatchProfileName          *template.Template
 	AuthenticationProfileName *template.Template
 	AuthorizationProfileName  *template.Template
+	MutatorProfileName        *template.Template
 }
 
 func (rule *Rule) GetConfig() *config.RuleConfig {
@@ -28,6 +29,10 @@ func (rule *Rule) GetAuthenticationProfileName() *template.Template {
 
 func (rule *Rule) GetAuthorizationProfileName() *template.Template {
 	return rule.AuthorizationProfileName
+}
+
+func (rule *Rule) GetMutatorProfileName() *template.Template {
+	return rule.MutatorProfileName
 }
 
 func (rule *Rule) FromConfig(ruleConfig *config.RuleConfig, index int) []error {
@@ -47,6 +52,11 @@ func (rule *Rule) FromConfig(ruleConfig *config.RuleConfig, index int) []error {
 	}
 
 	rule.AuthorizationProfileName, err = template.New(fmt.Sprintf("RuleConfig.%d.AuthorizationProfileTmpl", index)).Parse(ruleConfig.AuthorizationProfileTmpl)
+	if err != nil {
+		errs = append(errs, err)
+	}
+
+	rule.MutatorProfileName, err = template.New(fmt.Sprintf("RuleConfig.%d.AuthorizationProfileTmpl", index)).Parse(ruleConfig.MutatorProfileTmpl)
 	if err != nil {
 		errs = append(errs, err)
 	}

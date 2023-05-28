@@ -44,10 +44,15 @@ type AuthorizationProfileConfig struct {
 	// } `yaml:"condition"`
 }
 
+type MutatorProfileConfig struct {
+	Mutators []MutatorConfig `yaml:"mutators"`
+}
+
 type RuleConfig struct {
 	MatchProfileTmpl         string `yaml:"matchProfile"`
 	OidcProfileTmpl          string `yaml:"oidcProfile"`
 	AuthorizationProfileTmpl string `yaml:"authorizationProfile"`
+	MutatorProfileTmpl       string `yaml:"mutatorProfile"`
 }
 
 type RootConfig struct {
@@ -59,5 +64,6 @@ type RootConfig struct {
 	MatchProfiles         map[string]MatchProfileConfig         `yaml:"matchProfiles"`
 	OidcProfiles          map[string]OidcProfileConfig          `yaml:"oidcProfiles"`
 	AuthorizationProfiles map[string]AuthorizationProfileConfig `yaml:"authorizationProfiles"`
+	MutatorProfiles       map[string]MutatorProfileConfig       `yaml:"mutatorProfiles"`
 	Rules                 []RuleConfig                          `yaml:"rules"`
 }

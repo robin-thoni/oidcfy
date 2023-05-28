@@ -79,6 +79,11 @@ func main() {
 			log.Printf("Authorization profile %s is invalid", name)
 		}
 	}
+	for name, profile := range profiles.MutatorProfiles {
+		if !profile.IsValid() {
+			log.Printf("Mutator profile %s is invalid", name)
+		}
+	}
 
 	ln, err := net.Listen("tcp", fmt.Sprintf("%s:%d", rootConfig.Http.Address, rootConfig.Http.Port))
 	if err != nil {
