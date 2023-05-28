@@ -129,11 +129,16 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 	if err != nil {
 		return false, nil
 	}
+	accessTokenRaw, err := r.Cookie(COOKIE_ACCESS_TOKEN)
+	if err != nil {
+		return false, nil
+	}
 	idTokenHash := hex.EncodeToString(crypto.SHA1.New().Sum(([]byte)(idTokenRaw.Value)))
 	verifyCacheItem, err := rule.oauthVerifyCache.Value(idTokenHash)
 	if verifyCacheItem != nil && err == nil {
 		ctx.GetExtra().Oidcfy.IdTokenRaw = idTokenRaw.Value
 		ctx.GetExtra().Oidcfy.IdToken = parseJwt(idTokenRaw.Value)
+		ctx.GetExtra().Oidcfy.AccessTokenRaw = accessTokenRaw.Value
 
 		return verifyCacheItem.Data().(bool), nil
 	}
@@ -151,6 +156,7 @@ func (rule *AuthenticationProfile) CheckAuthentication(rw http.ResponseWriter, r
 	}
 	ctx.GetExtra().Oidcfy.IdTokenRaw = idTokenRaw.Value
 	ctx.GetExtra().Oidcfy.IdToken = parseJwt(idTokenRaw.Value)
+	ctx.GetExtra().Oidcfy.AccessTokenRaw = accessTokenRaw.Value
 	rule.oauthVerifyCache.Add(idTokenHash, idToken.Expiry.Sub(time.Now()), true) // TODO add configuration for token caching duration, to allow shorter detection of revoked tokens
 	return true, nil
 }
