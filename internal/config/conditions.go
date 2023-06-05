@@ -7,6 +7,7 @@ import (
 )
 
 type ConditionConfig struct {
+	True         *ConditionTrueConfig         `yaml:"true"`
 	And          *ConditionAndConfig          `yaml:"and"`
 	Or           *ConditionOrConfig           `yaml:"or"`
 	Not          *ConditionNotConfig          `yaml:"not"`
@@ -18,11 +19,14 @@ type ConditionConfig struct {
 }
 
 func (cond *ConditionConfig) UnmarshalYAML(value *yaml.Node) error {
-	if value.Tag == "!!str" {
+	if value.Tag == "!!str" || value.Tag == "!!bool" {
 		return yaml.Unmarshal(([]byte)(fmt.Sprintf("%s: {}", value.Value)), cond)
 	}
 	type rawType ConditionConfig
 	return value.Decode((*rawType)(cond))
+}
+
+type ConditionTrueConfig struct {
 }
 
 type ConditionAndConfig struct {

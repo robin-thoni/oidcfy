@@ -60,6 +60,14 @@ func buildFromConfig(condConfig *config.ConditionConfig, ctx *conditionContext) 
 	errs := make([]error, 0, 0)
 	conds := make([]interfaces.Condition, 0, 1)
 
+	if condConfig.True != nil {
+		cond1 := True{}
+		errs1 := cond1.fromConfig(condConfig.True, ctx)
+		if len(errs1) > 0 {
+			errs = append(errs, errs1...)
+		}
+		conds = append(conds, &cond1)
+	}
 	if condConfig.And != nil {
 		cond1 := And{}
 		errs1 := cond1.fromConfig(condConfig.And, ctx)
