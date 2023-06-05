@@ -8,6 +8,7 @@ import (
 
 type ConditionConfig struct {
 	True         *ConditionTrueConfig         `yaml:"true"`
+	False        *ConditionFalseConfig        `yaml:"false"`
 	And          *ConditionAndConfig          `yaml:"and"`
 	Or           *ConditionOrConfig           `yaml:"or"`
 	Not          *ConditionNotConfig          `yaml:"not"`
@@ -27,6 +28,9 @@ func (cond *ConditionConfig) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type ConditionTrueConfig struct {
+}
+
+type ConditionFalseConfig struct {
 }
 
 type ConditionAndConfig struct {
