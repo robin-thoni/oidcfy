@@ -42,7 +42,7 @@ func buildFromConfigs(condConfigs []config.ConditionConfig, ctx *conditionContex
 		ctx1 := conditionContext{}
 		ctx1.Path = fmt.Sprintf("%d", i)
 		ctx1.Parent = ctx
-		cond1, errs1 := buildFromConfig(&cond, ctx)
+		cond1, errs1 := buildFromConfig(&cond, &ctx1)
 		if len(errs1) > 0 {
 			errs = append(errs, errs1...)
 		}
