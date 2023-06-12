@@ -13,7 +13,7 @@ func TestAndSuccessSimple1(t *testing.T) {
 	}
 	cond := And{}
 	errs := cond.fromConfig(&config.ConditionAndConfig{
-		Conditions: []config.ConditionConfig{},
+		Conditions: []*config.ConditionConfig{},
 	}, &condConfigCtx)
 	assert.Empty(t, errs)
 
@@ -28,7 +28,7 @@ func TestAndSuccessSimple2(t *testing.T) {
 	}
 	cond := And{}
 	errs := cond.fromConfig(&config.ConditionAndConfig{
-		Conditions: []config.ConditionConfig{{
+		Conditions: []*config.ConditionConfig{{
 			True: &config.ConditionTrueConfig{},
 		}},
 	}, &condConfigCtx)
@@ -45,7 +45,7 @@ func TestAndSuccessSimple3(t *testing.T) {
 	}
 	cond := And{}
 	errs := cond.fromConfig(&config.ConditionAndConfig{
-		Conditions: []config.ConditionConfig{{
+		Conditions: []*config.ConditionConfig{{
 			False: &config.ConditionFalseConfig{},
 		}},
 	}, &condConfigCtx)
@@ -62,7 +62,7 @@ func TestAndSuccessSimple4(t *testing.T) {
 	}
 	cond := And{}
 	errs := cond.fromConfig(&config.ConditionAndConfig{
-		Conditions: []config.ConditionConfig{{
+		Conditions: []*config.ConditionConfig{{
 			False: &config.ConditionFalseConfig{},
 		}, {
 			True: &config.ConditionTrueConfig{},
@@ -81,7 +81,7 @@ func TestAndSuccessSimple5(t *testing.T) {
 	}
 	cond := And{}
 	errs := cond.fromConfig(&config.ConditionAndConfig{
-		Conditions: []config.ConditionConfig{{
+		Conditions: []*config.ConditionConfig{{
 			True: &config.ConditionTrueConfig{},
 		}, {
 			False: &config.ConditionFalseConfig{},

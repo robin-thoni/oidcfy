@@ -26,7 +26,7 @@ func (cond *Not) fromConfig(condConfig *config.ConditionNotConfig, ctx *conditio
 	ctx1 := conditionContext{}
 	ctx1.Path = "not"
 	ctx1.Parent = ctx
-	cond.Condition, errs = buildFromConfig(&condConfig.Condition, &ctx1)
+	cond.Condition, errs = buildFromConfig(condConfig.Condition, &ctx1)
 
 	if len(errs) > 0 {
 		return errs

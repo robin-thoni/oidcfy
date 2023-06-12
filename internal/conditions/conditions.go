@@ -35,14 +35,14 @@ func BuildFromConfig(cond config.ConditionConfig) (interfaces.Condition, []error
 // 	return nil, errors.New(fmt.Sprintf("Unknown condition config type: %s", t))
 // }
 
-func buildFromConfigs(condConfigs []config.ConditionConfig, ctx *conditionContext) ([]interfaces.Condition, []error) {
+func buildFromConfigs(condConfigs []*config.ConditionConfig, ctx *conditionContext) ([]interfaces.Condition, []error) {
 	errs := make([]error, 0, 0)
 	conds := make([]interfaces.Condition, 0, len(condConfigs))
 	for i, cond := range condConfigs {
 		ctx1 := conditionContext{}
 		ctx1.Path = fmt.Sprintf("%d", i)
 		ctx1.Parent = ctx
-		cond1, errs1 := buildFromConfig(&cond, &ctx1)
+		cond1, errs1 := buildFromConfig(cond, &ctx1)
 		if len(errs1) > 0 {
 			errs = append(errs, errs1...)
 		}

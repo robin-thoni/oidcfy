@@ -34,7 +34,7 @@ type ConditionFalseConfig struct {
 }
 
 type ConditionAndConfig struct {
-	Conditions []ConditionConfig `yaml:"conditions"`
+	Conditions []*ConditionConfig `yaml:"conditions"`
 }
 
 func (cond *ConditionAndConfig) UnmarshalYAML(value *yaml.Node) error {
@@ -46,7 +46,7 @@ func (cond *ConditionAndConfig) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type ConditionOrConfig struct {
-	Conditions []ConditionConfig `yaml:"conditions"`
+	Conditions []*ConditionConfig `yaml:"conditions"`
 }
 
 func (cond *ConditionOrConfig) UnmarshalYAML(value *yaml.Node) error {
@@ -58,7 +58,7 @@ func (cond *ConditionOrConfig) UnmarshalYAML(value *yaml.Node) error {
 }
 
 type ConditionNotConfig struct {
-	Condition ConditionConfig `yaml:"condition"`
+	Condition *ConditionConfig `yaml:"condition"`
 }
 
 type ConditionRedirectConfig struct {
