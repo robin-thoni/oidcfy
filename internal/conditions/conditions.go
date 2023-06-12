@@ -57,6 +57,10 @@ func buildFromConfigs(condConfigs []config.ConditionConfig, ctx *conditionContex
 
 func buildFromConfig(condConfig *config.ConditionConfig, ctx *conditionContext) (interfaces.Condition, []error) {
 
+	if condConfig == nil {
+		return nil, []error{errors.New("Condition config is nil")}
+	}
+
 	errs := make([]error, 0, 0)
 	conds := make([]interfaces.Condition, 0, 1)
 
