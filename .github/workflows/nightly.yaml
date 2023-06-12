@@ -32,6 +32,7 @@ jobs:
           release_name: Nightly
           body: Nightly
           draft: true
+          tag_name: nightly
 
       - name: Upload binary
         uses: actions/upload-release-asset@v1
